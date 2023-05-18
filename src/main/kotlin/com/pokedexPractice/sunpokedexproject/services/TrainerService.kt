@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service
 import java.util.*
 
 @Service
-class TrainerService(private val trainerRepository: TrainerRepository) {
+class TrainerService(
+    private val trainerRepository: TrainerRepository,
+    private val pokemonService: PokedexService
+    ) {
 
     fun getTrainers(): List<Trainer>{
         return trainerRepository.findAll()
@@ -28,7 +31,7 @@ class TrainerService(private val trainerRepository: TrainerRepository) {
         trainerRepository.save(newTrainer)
     }
 
-    fun updateTrainer(trainerId: UUID, pokemonName: String, pokemonService: PokedexService) {
+    fun updateTrainer(trainerId: UUID, pokemonName: String) {
         val trainer = trainerRepository.findById(trainerId).orElse(null)
         val pokemon = pokemonService.getPokemonByName(pokemonName)
         val name = pokemon?.name

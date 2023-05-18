@@ -16,7 +16,7 @@ import java.util.*
 @RequestMapping("/trainer")
 class TrainerController(private val trainerService: TrainerService, private val pokedexService: PokedexService) {
 
-    @GetMapping("/trainers")
+    @GetMapping
     fun getTrainers(): ResponseEntity<List<Trainer>> {
         val trainers = trainerService.getTrainers()
         return ResponseEntity.ok(trainers)
@@ -24,27 +24,22 @@ class TrainerController(private val trainerService: TrainerService, private val 
 
     @GetMapping("/{trainerId}")
     fun getTrainerById(@PathVariable trainerId: UUID): ResponseEntity<Trainer> {
-        val trainer = trainerService.getTrainerById(trainerId)
-
-        return if (trainer != null) {
-            ResponseEntity.ok(trainer)
-        } else {
-            ResponseEntity.notFound().build()
-        }
+        return trainerService.getTrainerById(trainerId)?.let {
+            ResponseEntity.ok(it)
+        } ?: ResponseEntity.notFound().build()
     }
 
     @GetMapping("/{trainerId}/captured")
     fun getCapturedPokemons(@PathVariable trainerId: UUID): ResponseEntity<List<String>> {
-        val pokemons = trainerService.getTrainerById(trainerId)?.capturedPokemon
+        val pokemons = trainerService.getTrainerById(trainerId)?.capturedPokemon ?: listOf()
         return ResponseEntity.ok(pokemons)
     }
 
     @PostMapping("/register")
     fun register(@Valid @RequestBody trainer: Trainer): ResponseEntity<Any> {
-        val trainers = trainerService.getTrainerByEmail(trainer.email)
-        return if (trainers != null) {
+        return trainerService.getTrainerByEmail(trainer.email)?.let {
             ResponseEntity.badRequest().body("Email already exist")
-        } else {
+        } ?: run {
             trainerService.register(trainer)
             ResponseEntity.ok("Trainer registered successfully")
         }
@@ -52,18 +47,15 @@ class TrainerController(private val trainerService: TrainerService, private val 
 
     @PutMapping("/{trainerId}/pokemon/{pokemonId}/capture")
     fun capturePokemon(@PathVariable trainerId: UUID, @PathVariable pokemonId: Int): ResponseEntity<String> {
-        val trainer = trainerService.getTrainerById(trainerId)
-        val pokemon = pokedexService.getPokemonById(pokemonId)
-        if (trainer == null || pokemon == null) {
-            return ResponseEntity.notFound().build()
-        }
+        val trainer = trainerService.getTrainerById(trainerId) ?: return ResponseEntity.notFound().build()
+        val pokemon = pokedexService.getPokemonById(pokemonId) ?: return ResponseEntity.notFound().build()
 
         val pokemonName = pokemon.name
-        if (trainer.capturedPokemon.contains(pokemonName)) {
-            return ResponseEntity.badRequest().body("Pokemon is already captured")
+        return if (trainer.capturedPokemon.contains(pokemonName)) {
+            ResponseEntity.badRequest().body("Pokemon is already captured")
         } else {
-            trainerService.updateTrainer(trainerId, pokemonName, pokedexService)
-            return ResponseEntity.ok("Pokemon captured successfully!")
+            trainerService.updateTrainer(trainerId, pokemonName)
+            ResponseEntity.ok("Pokemon captured successfully!")
         }
     }
 
